@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{Correctness, DICTIONARY, Guess, Guesser};
 
 struct Candidate {
@@ -8,7 +6,7 @@ struct Candidate {
 }
 
 pub struct Naive {
-    candidates: HashMap<&'static str, usize>,
+    candidates: Vec<(&'static str, usize)>,
 }
 
 impl Naive {
@@ -16,7 +14,7 @@ impl Naive {
 
     pub fn new() -> Self {
         Self {
-            candidates: HashMap::from_iter(DICTIONARY.lines().map(|line| {
+            candidates: Vec::from_iter(DICTIONARY.lines().map(|line| {
                 let (word, frequency) = line
                     .split_once(' ')
                     .expect("every line is word + space + frequency");
@@ -34,13 +32,13 @@ impl Guesser for Naive {
         }
 
         if let Some(last_guess) = history.last() {
-            self.candidates.retain(|word, _| last_guess.allows(word));
+            self.candidates.retain(|(word, _)| last_guess.allows(word));
         }
 
-        let total_weight: usize = self.candidates.values().sum();
+        let total_weight: usize = self.candidates.iter().map(|(_, frequency)| frequency).sum();
         let mut best_candidate: Option<Candidate> = None;
 
-        for guess_word in self.candidates.keys() {
+        for (guess_word, _) in self.candidates.iter() {
             let mut expected_entropy = 0.0;
 
             for pattern in Correctness::patterns() {
