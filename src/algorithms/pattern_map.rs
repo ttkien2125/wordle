@@ -1,10 +1,8 @@
-use std::{borrow::Cow, collections::HashMap};
-
-use once_cell::sync::OnceCell;
+use std::{borrow::Cow, collections::HashMap, sync::OnceLock};
 
 use crate::{Correctness, DICTIONARY, Guess, Guesser};
 
-static INITIAL: OnceCell<Vec<(&'static str, usize)>> = OnceCell::new();
+static INITIAL: OnceLock<Vec<(&'static str, usize)>> = OnceLock::new();
 
 struct Candidate {
     word: &'static str,
