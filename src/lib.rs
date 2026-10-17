@@ -63,35 +63,22 @@ impl Correctness {
         assert_eq!(guess.len(), 5);
 
         let mut mask = [Self::Wrong; 5];
+        let mut misplaced = [0u8; (b'z' - b'a' + 1) as usize];
 
-        // Check for green
-        for (index, (answer_byte, guess_byte)) in answer.bytes().zip(guess.bytes()).enumerate() {
+        for ((answer_byte, guess_byte), correctness) in
+            answer.bytes().zip(guess.bytes()).zip(mask.iter_mut())
+        {
             if answer_byte == guess_byte {
-                mask[index] = Self::Correct;
+                *correctness = Correctness::Correct
+            } else {
+                misplaced[(answer_byte - b'a') as usize] += 1;
             }
         }
 
-        // Check for yellow
-        let mut used = [false; 5];
-        for (index, &correctness) in mask.iter().enumerate() {
-            if correctness == Self::Correct {
-                used[index] = true;
-            }
-        }
-
-        for (index, guess_byte) in guess.bytes().enumerate() {
-            if mask[index] == Self::Correct {
-                continue;
-            }
-
-            if answer.bytes().enumerate().any(|(index, answer_byte)| {
-                if answer_byte == guess_byte && !used[index] {
-                    used[index] = true;
-                    return true;
-                }
-                false
-            }) {
-                mask[index] = Self::Misplaced;
+        for (guess_byte, correctness) in guess.bytes().zip(mask.iter_mut()) {
+            if *correctness == Correctness::Wrong && misplaced[(guess_byte - b'a') as usize] > 0 {
+                *correctness = Correctness::Misplaced;
+                misplaced[(guess_byte - b'a') as usize] -= 1;
             }
         }
 
