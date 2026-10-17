@@ -6,6 +6,7 @@ const ANSWERS: &str = include_str!("../answers.txt");
 #[derive(Clone, ValueEnum)]
 enum Algorithm {
     Naive,
+    OnceInit,
 }
 
 #[derive(Parser)]
@@ -22,6 +23,7 @@ fn main() {
 
     match args.algorithm {
         Algorithm::Naive => play(wordle::algorithms::Naive::new, args.max),
+        Algorithm::OnceInit => play(wordle::algorithms::OnceInit::new, args.max),
     }
 }
 
