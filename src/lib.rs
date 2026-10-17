@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{borrow::Cow, collections::HashSet};
 
 pub mod algorithms;
 
@@ -40,7 +40,10 @@ impl Wordle {
             );
 
             let mask = Correctness::compute(answer, &guess);
-            history.push(Guess { word: guess, mask });
+            history.push(Guess {
+                word: Cow::Owned(guess),
+                mask,
+            });
         }
 
         None
@@ -107,12 +110,12 @@ impl Correctness {
     }
 }
 
-pub struct Guess {
-    pub word: String,
+pub struct Guess<'a> {
+    pub word: Cow<'a, str>,
     pub mask: [Correctness; 5],
 }
 
-impl Guess {
+impl Guess<'_> {
     fn allows(&self, word: &str) -> bool {
         Correctness::compute(word, &self.word) == self.mask
     }

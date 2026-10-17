@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{Correctness, DICTIONARY, Guess, Guesser};
 
 struct Candidate {
@@ -43,7 +45,7 @@ impl Guesser for Naive {
 
             for pattern in Correctness::patterns() {
                 let hypothetical = Guess {
-                    word: guess_word.to_string(),
+                    word: Cow::Borrowed(guess_word),
                     mask: pattern,
                 };
 
