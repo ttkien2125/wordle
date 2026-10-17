@@ -61,7 +61,7 @@ impl Correctness {
             answer.bytes().zip(guess.bytes()).zip(mask.iter_mut())
         {
             if answer_byte == guess_byte {
-                *correctness = Correctness::Correct
+                *correctness = Correctness::Correct;
             } else {
                 misplaced[(answer_byte - b'a') as usize] += 1;
             }

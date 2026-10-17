@@ -1,2 +1,5 @@
 [build]
 rustflags = ["-Ctarget-cpu=native", "-Cforce-frame-pointers=yes", "-Csymbol-mangling-version=legacy", "-Zunstable-options"]
+
+[env]
+OUT_DIR = "out"

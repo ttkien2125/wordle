@@ -2,6 +2,7 @@ use clap::{Parser, ValueEnum};
 use wordle::Guesser;
 
 const ANSWERS: &str = include_str!("../answers.txt");
+const MAX_BAR_WIDTH: usize = 40;
 
 #[derive(Clone, ValueEnum)]
 enum Algorithm {
@@ -26,13 +27,13 @@ fn main() {
     let args = Args::parse();
 
     match args.algorithm {
-        Algorithm::Naive => play(wordle::algorithms::Naive::new, args),
-        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, args),
-        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, args),
+        Algorithm::Naive => play(wordle::algorithms::Naive::new, &args),
+        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, &args),
+        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, &args),
     }
 }
 
-fn play<G: Guesser>(mut new: impl FnMut() -> G, args: Args) {
+fn play<G: Guesser>(mut new: impl FnMut() -> G, args: &Args) {
     let w = wordle::Wordle::new();
 
     let mut score_counts = [0; wordle::MAX_GUESSES];
@@ -82,7 +83,6 @@ fn print_statistics(score_counts: [usize; wordle::MAX_GUESSES]) {
     println!("games won: {games_won} out of {answers_guessed} ({win_percentage:.2}%)");
 
     let max_count = score_counts.iter().copied().max().unwrap_or(0);
-    const MAX_BAR_WIDTH: usize = 40;
 
     println!("score distribution:");
     for (score, &count) in score_counts.iter().take(max_score + 1).enumerate().skip(1) {

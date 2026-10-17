@@ -66,7 +66,7 @@ impl Guesser for PatternMap {
 
             let is_better = best_candidate
                 .as_ref()
-                .map_or(true, |best| expected_entropy > best.score);
+                .is_none_or(|best| expected_entropy > best.score);
 
             if is_better {
                 best_candidate = Some(Candidate {

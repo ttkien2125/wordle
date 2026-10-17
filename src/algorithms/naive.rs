@@ -34,7 +34,7 @@ impl Guesser for Naive {
         let total_weight: usize = self.candidates.iter().map(|(_, frequency)| frequency).sum();
         let mut best_candidate: Option<Candidate> = None;
 
-        for (guess_word, _) in self.candidates.iter() {
+        for (guess_word, _) in &self.candidates {
             let mut expected_entropy = 0.0;
 
             for pattern in Correctness::patterns() {
@@ -64,7 +64,7 @@ impl Guesser for Naive {
 
             let is_better = best_candidate
                 .as_ref()
-                .map_or(true, |best| expected_entropy > best.score);
+                .is_none_or(|best| expected_entropy > best.score);
 
             if is_better {
                 best_candidate = Some(Candidate {
