@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use clap::{Parser, ValueEnum};
 use wordle::Guesser;
 
@@ -36,6 +38,7 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
 
     let mut answers_guessed = 0;
     let mut games_won = 0;
+    let mut score_map = BTreeMap::new();
     let mut total_score = 0;
     let mut min_score = usize::MAX;
     let mut max_score = usize::MIN;
@@ -50,6 +53,7 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
                 games_won += 1;
             }
 
+            *score_map.entry(score).or_insert(0) += 1;
             total_score += score;
             min_score = min_score.min(score);
             max_score = max_score.max(score);
@@ -66,6 +70,10 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
 
     println!("average score: {average_score:.2}");
     println!("min score: {min_score} - max score: {max_score}");
+    println!("score distribution:");
+    for (score, num_games) in score_map {
+        println!(" - score {score}: {num_games} games");
+    }
     println!("games won: {games_won} out of {answers_guessed}");
     println!("win percentage: {win_percentage:.2}%");
 }
