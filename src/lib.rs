@@ -62,8 +62,8 @@ impl Correctness {
         let mut mask = [Self::Wrong; 5];
 
         // Check for green
-        for (index, (answer_char, guess_char)) in answer.chars().zip(guess.chars()).enumerate() {
-            if answer_char == guess_char {
+        for (index, (answer_byte, guess_byte)) in answer.bytes().zip(guess.bytes()).enumerate() {
+            if answer_byte == guess_byte {
                 mask[index] = Self::Correct;
             }
         }
@@ -76,13 +76,13 @@ impl Correctness {
             }
         }
 
-        for (index, guess_char) in guess.chars().enumerate() {
+        for (index, guess_byte) in guess.bytes().enumerate() {
             if mask[index] == Self::Correct {
                 continue;
             }
 
-            if answer.chars().enumerate().any(|(index, answer_char)| {
-                if answer_char == guess_char && !used[index] {
+            if answer.bytes().enumerate().any(|(index, answer_byte)| {
+                if answer_byte == guess_byte && !used[index] {
                     used[index] = true;
                     return true;
                 }
