@@ -16,13 +16,7 @@ impl Naive {
 
     pub fn new() -> Self {
         Self {
-            candidates: Vec::from_iter(DICTIONARY.lines().map(|line| {
-                let (word, frequency) = line
-                    .split_once(' ')
-                    .expect("every line is word + space + frequency");
-                let frequency = frequency.parse().expect("frequency is a number");
-                (word, frequency)
-            })),
+            candidates: DICTIONARY.to_vec(),
         }
     }
 }

@@ -13,20 +13,7 @@ impl ArrayEntropy {
 
     pub fn new() -> Self {
         Self {
-            candidates: Cow::Borrowed(INITIAL.get_or_init(|| {
-                let mut words: Vec<_> = DICTIONARY
-                    .lines()
-                    .map(|line| {
-                        let (word, frequency) = line
-                            .split_once(' ')
-                            .expect("every line is word + space + frequency");
-                        let frequency = frequency.parse().expect("frequency is a number");
-                        (word, frequency)
-                    })
-                    .collect();
-                words.sort_unstable_by_key(|&(_, frequency)| std::cmp::Reverse(frequency));
-                words
-            })),
+            candidates: Cow::Borrowed(INITIAL.get_or_init(|| DICTIONARY.to_vec())),
         }
     }
 }
