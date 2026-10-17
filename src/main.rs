@@ -7,6 +7,7 @@ const ANSWERS: &str = include_str!("../answers.txt");
 enum Algorithm {
     Naive,
     OnceInit,
+    PatternMap,
 }
 
 #[derive(Parser)]
@@ -24,6 +25,7 @@ fn main() {
     match args.algorithm {
         Algorithm::Naive => play(wordle::algorithms::Naive::new, args.max),
         Algorithm::OnceInit => play(wordle::algorithms::OnceInit::new, args.max),
+        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, args.max),
     }
 }
 

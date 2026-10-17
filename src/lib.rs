@@ -50,7 +50,7 @@ impl Wordle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Correctness {
     Correct,
     Misplaced,

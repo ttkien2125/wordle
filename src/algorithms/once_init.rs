@@ -40,10 +40,8 @@ impl Guesser for OnceInit {
         }
 
         if let Some(last_guess) = history.last() {
-            if matches!(self.candidates, Cow::Owned(_)) {
-                self.candidates
-                    .to_mut()
-                    .retain(|(word, _)| last_guess.allows(word));
+            if let Cow::Owned(ref mut candidates) = self.candidates {
+                candidates.retain(|(word, _)| last_guess.allows(word));
             } else {
                 self.candidates = Cow::Owned(
                     self.candidates
