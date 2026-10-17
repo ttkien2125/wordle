@@ -16,25 +16,31 @@ struct Args {
     algorithm: Algorithm,
 
     #[arg(short, long)]
-    max: Option<usize>,
+    games: Option<usize>,
+
+    #[arg(short, long)]
+    stats: bool,
 }
 
 fn main() {
     let args = Args::parse();
 
     match args.algorithm {
-        Algorithm::Naive => play(wordle::algorithms::Naive::new, args.max),
-        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, args.max),
-        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, args.max),
+        Algorithm::Naive => play(wordle::algorithms::Naive::new, args),
+        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, args),
+        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, args),
     }
 }
 
-fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
+fn play<G: Guesser>(mut new: impl FnMut() -> G, args: Args) {
     let w = wordle::Wordle::new();
 
     let mut score_counts = [0; wordle::MAX_GUESSES];
 
-    for answer in ANSWERS.split_whitespace().take(max.unwrap_or(usize::MAX)) {
+    for answer in ANSWERS
+        .split_whitespace()
+        .take(args.games.unwrap_or(usize::MAX))
+    {
         let guesser = new();
 
         if let Some(score) = w.play(answer, guesser) {
@@ -45,7 +51,9 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
         }
     }
 
-    print_statistics(score_counts);
+    if args.stats {
+        print_statistics(score_counts);
+    }
 }
 
 fn print_statistics(score_counts: [usize; wordle::MAX_GUESSES]) {
