@@ -3,7 +3,7 @@ use std::{borrow::Cow, collections::HashSet};
 pub mod algorithms;
 
 pub const DICTIONARY: &str = include_str!("../dictionary.txt");
-const MAX_GUESSES: usize = 32;
+pub const MAX_GUESSES: usize = 32;
 
 pub struct Wordle {
     dictionary: HashSet<&'static str>,
@@ -26,11 +26,6 @@ impl Wordle {
         for i in 1..=MAX_GUESSES {
             let guess = guesser.guess(&history);
             if guess == answer {
-                print!("history: ");
-                for guess in history {
-                    print!("{} ", guess.word);
-                }
-                println!();
                 return Some(i);
             }
 
