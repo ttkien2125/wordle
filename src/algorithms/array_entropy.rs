@@ -52,7 +52,7 @@ impl Guesser for ArrayEntropy {
         }
 
         let mut best_word = self.candidates[0].0;
-        let mut min_score = 0f64;
+        let mut min_score = 0.0;
 
         if self.candidates.len() > 2 {
             for &(guess_word, _) in self.candidates.iter() {
@@ -63,7 +63,7 @@ impl Guesser for ArrayEntropy {
                     pattern_weights[mask_to_index(mask)] += frequency;
                 }
 
-                let mut score = 0f64;
+                let mut score = 0.0;
                 for weight in pattern_weights {
                     if weight > 1 {
                         let weight = weight as f64;

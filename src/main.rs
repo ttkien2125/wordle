@@ -33,14 +33,39 @@ fn main() {
 
 fn play<G: Guesser>(mut new: impl FnMut() -> G, max: Option<usize>) {
     let w = wordle::Wordle::new();
+
+    let mut answers_guessed = 0;
+    let mut games_won = 0;
+    let mut total_score = 0;
+    let mut min_score = usize::MAX;
+    let mut max_score = usize::MIN;
+
     for answer in ANSWERS.split_whitespace().take(max.unwrap_or(usize::MAX)) {
         let guesser = new();
 
         if let Some(score) = w.play(answer, guesser) {
+            answers_guessed += 1;
+
+            if score <= 6 {
+                games_won += 1;
+            }
+
+            total_score += score;
+            min_score = min_score.min(score);
+            max_score = max_score.max(score);
+
             println!("found '{answer}' in {score} guesses");
             println!();
         } else {
             eprintln!("failed to guess");
         }
     }
+
+    let average_score = total_score as f64 / answers_guessed as f64;
+    let win_percentage = 100.0 * games_won as f64 / answers_guessed as f64;
+
+    println!("average score: {average_score:.2}");
+    println!("min score: {min_score} - max score: {max_score}");
+    println!("games won: {games_won} out of {answers_guessed}");
+    println!("win percentage: {win_percentage:.2}%");
 }
