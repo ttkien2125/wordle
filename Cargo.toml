@@ -3,5 +3,9 @@ name = "wordle"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+debug = true
+
 [dependencies]
 itertools = "0.15"
+clap = { version = "4", features = [ "derive" ] }
