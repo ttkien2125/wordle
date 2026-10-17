@@ -8,6 +8,7 @@ enum Algorithm {
     Naive,
     OnceInit,
     PatternMap,
+    ArrayEntropy,
 }
 
 #[derive(Parser)]
@@ -26,6 +27,7 @@ fn main() {
         Algorithm::Naive => play(wordle::algorithms::Naive::new, args.max),
         Algorithm::OnceInit => play(wordle::algorithms::OnceInit::new, args.max),
         Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, args.max),
+        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, args.max),
     }
 }
 

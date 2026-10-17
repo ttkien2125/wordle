@@ -6,3 +6,6 @@ pub use once_init::OnceInit;
 
 mod pattern_map;
 pub use pattern_map::PatternMap;
+
+mod array_entropy;
+pub use array_entropy::ArrayEntropy;
