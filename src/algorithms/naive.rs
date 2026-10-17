@@ -12,6 +12,8 @@ pub struct Naive {
 }
 
 impl Naive {
+    const FIRST_GUESS: &str = "tares";
+
     pub fn new() -> Self {
         Self {
             candidates: HashMap::from_iter(DICTIONARY.lines().map(|line| {
@@ -28,11 +30,11 @@ impl Naive {
 impl Guesser for Naive {
     fn guess(&mut self, history: &[Guess]) -> String {
         if history.is_empty() {
-            return "tares".to_string();
+            return Self::FIRST_GUESS.to_string();
         }
 
         if let Some(last_guess) = history.last() {
-            self.candidates.retain(|word, _| last_guess.matches(word));
+            self.candidates.retain(|word, _| last_guess.allows(word));
         }
 
         let total_weight: usize = self.candidates.values().sum();
@@ -51,7 +53,7 @@ impl Guesser for Naive {
                     .candidates
                     .iter()
                     .filter_map(|(target_word, frequency)| {
-                        if hypothetical.matches(target_word) {
+                        if hypothetical.allows(target_word) {
                             return Some(frequency);
                         }
                         None

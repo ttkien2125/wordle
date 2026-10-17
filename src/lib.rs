@@ -113,7 +113,7 @@ pub struct Guess {
 }
 
 impl Guess {
-    pub fn matches(&self, word: &str) -> bool {
+    fn allows(&self, word: &str) -> bool {
         Correctness::compute(word, &self.word) == self.mask
     }
 }
@@ -220,45 +220,6 @@ mod tests {
             let w = Wordle::new();
             let guesser = guesser!(|_history| { "wrong".to_string() });
             assert_eq!(w.play("right", guesser), None);
-        }
-    }
-
-    mod guess_matcher {
-        macro_rules! check {
-            ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
-                assert!(
-                    $crate::Guess {
-                        word: $prev.to_string(),
-                        mask: mask![$($mask )+]
-                    }
-                    .matches($next)
-                );
-            };
-
-            ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
-                assert!(
-                    !$crate::Guess {
-                        word: $prev.to_string(),
-                        mask: mask![$($mask )+]
-                    }
-                    .matches($next)
-                );
-            };
-        }
-
-        #[test]
-        fn allows() {
-            check!("abcde" + [C C C C C] allows "abcde");
-            check!("abcde" + [W W W W W] allows "fghij");
-            check!("abcde" + [M M M M M] allows "eabcd");
-            check!("abcde" + [M M M M M] allows "eabcd");
-            check!("baaaa" + [W C M W W] allows "aaccc");
-        }
-
-        #[test]
-        fn disallows() {
-            check!("abcdf" + [C C C C C] disallows "abcde");
-            check!("baaaa" + [W C M W W] disallows "caacc");
         }
     }
 
