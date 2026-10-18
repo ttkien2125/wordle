@@ -1,36 +1,64 @@
 use clap::{Parser, ValueEnum};
-use wordle::Guesser;
+use wordle::{Guesser, Solver};
 
 const ANSWERS: &str = include_str!("../answers.txt");
 const MAX_BAR_WIDTH: usize = 40;
 
 #[derive(Clone, ValueEnum)]
-enum Algorithm {
-    Naive,
-    PatternMap,
-    ArrayEntropy,
+enum Rank {
+    /// Pick based on E[information]
+    ExpectedInformation,
+    /// Pick based on p(word) + E[information]
+    InfoPlusProbability,
+    /// Pick based on p(word) * E[information]
+    WeightedInformation,
+    /// Pick based on E[score] = p(word) * (score + 1) + (1 - p(word)) * (score + E[guesses](entropy - E[information]))
+    ExpectedScore,
 }
 
 #[derive(Parser)]
 struct Args {
-    #[arg(value_enum)]
-    algorithm: Algorithm,
+    /// Set how candidates are ranked at each step of the solver.
+    ///
+    /// By default, candidates will be ranked based on expected score.
+    #[arg(value_enum, default_value = "expected-score")]
+    rank_by: Rank,
 
+    /// By default, counts will be smoothed using a sigmoid. This flag disables that.
+    #[arg(long)]
+    no_sigmoid: bool,
+
+    /// By default, only the most likely 1/3 of candidates are considered at each step. This flag
+    /// disables that pruning behavior.
+    #[arg(long)]
+    no_cut_off: bool,
+
+    /// By default, statistics are printed at the end. This flag disables that.
+    #[arg(long)]
+    no_stats: bool,
+
+    /// The number of games to run.
+    ///
+    /// If not passed, all Wordle games are run.
     #[arg(short, long)]
     games: Option<usize>,
-
-    #[arg(short, long)]
-    stats: bool,
 }
 
 fn main() {
     let args = Args::parse();
+    let mut solver = Solver::builder();
 
-    match args.algorithm {
-        Algorithm::Naive => play(wordle::algorithms::Naive::new, &args),
-        Algorithm::PatternMap => play(wordle::algorithms::PatternMap::new, &args),
-        Algorithm::ArrayEntropy => play(wordle::algorithms::ArrayEntropy::new, &args),
-    }
+    solver.sigmoid = !args.no_sigmoid;
+    solver.cut_off = !args.no_cut_off;
+
+    solver.rank_by = match args.rank_by {
+        Rank::ExpectedInformation => wordle::Rank::ExpectedInformation,
+        Rank::InfoPlusProbability => wordle::Rank::InfoPlusProbability,
+        Rank::WeightedInformation => wordle::Rank::WeightedInformation,
+        Rank::ExpectedScore => wordle::Rank::ExpectedScore,
+    };
+
+    play(|| solver.build(), &args);
 }
 
 fn play<G: Guesser>(mut new: impl FnMut() -> G, args: &Args) {
@@ -52,7 +80,7 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, args: &Args) {
         }
     }
 
-    if args.stats {
+    if !args.no_stats {
         print_statistics(score_counts);
     }
 }

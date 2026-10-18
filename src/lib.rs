@@ -1,6 +1,7 @@
 use std::{borrow::Cow, collections::HashSet};
 
-pub mod algorithms;
+mod solver;
+pub use solver::{Rank, Solver};
 
 pub const MAX_GUESSES: usize = 32;
 
