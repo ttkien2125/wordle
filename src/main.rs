@@ -24,7 +24,7 @@ struct Args {
     ///
     /// By default, candidates will be ranked based on expected score.
     #[arg(value_enum, default_value = "expected-score")]
-    rank_by: Rank,
+    rank: Rank,
 
     /// By default, counts will be smoothed using a sigmoid. This flag disables that.
     #[arg(long)]
@@ -51,17 +51,15 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let mut solver = Solver::builder();
-
-    solver.sigmoid = !args.no_sigmoid;
-    solver.cut_off = !args.no_cut_off;
-
-    solver.rank_by = match args.rank_by {
-        Rank::ExpectedInformation => wordle::Rank::ExpectedInformation,
-        Rank::InfoPlusProbability => wordle::Rank::InfoPlusProbability,
-        Rank::WeightedInformation => wordle::Rank::WeightedInformation,
-        Rank::ExpectedScore => wordle::Rank::ExpectedScore,
-    };
+    let solver = Solver::builder()
+        .rank(match args.rank {
+            Rank::ExpectedInformation => wordle::Rank::ExpectedInformation,
+            Rank::InfoPlusProbability => wordle::Rank::InfoPlusProbability,
+            Rank::WeightedInformation => wordle::Rank::WeightedInformation,
+            Rank::ExpectedScore => wordle::Rank::ExpectedScore,
+        })
+        .sigmoid(!args.no_sigmoid)
+        .cut_off(!args.no_cut_off);
 
     if args.interactive {
         play_interactive(|| solver.build());
