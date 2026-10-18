@@ -1,3 +1,5 @@
+use std::io::{Write, stdin, stdout};
+
 use clap::{Parser, ValueEnum};
 use wordle::{Guesser, Solver};
 
@@ -40,8 +42,11 @@ struct Args {
     /// The number of games to run.
     ///
     /// If not passed, all Wordle games are run.
-    #[arg(short, long)]
+    #[arg(short, long, conflicts_with = "interactive")]
     games: Option<usize>,
+
+    #[arg(short, long, conflicts_with = "games")]
+    interactive: bool,
 }
 
 fn main() {
@@ -58,7 +63,48 @@ fn main() {
         Rank::ExpectedScore => wordle::Rank::ExpectedScore,
     };
 
-    play(|| solver.build(), &args);
+    if args.interactive {
+        play_interactive(|| solver.build());
+    } else {
+        play(|| solver.build(), &args);
+    }
+}
+
+fn play_interactive<G: Guesser>(new: impl FnOnce() -> G) {
+    let mut guesser = new();
+    let mut history = Vec::new();
+    let mut input = String::with_capacity(8);
+
+    println!("C: Correct / Green, M: Misplaced / Yellow, W: Wrong / Gray");
+
+    for turn in 1..=6 {
+        let guess = guesser.guess(&history);
+        println!("Guess {turn}: {}", guess.to_uppercase());
+
+        let mask = loop {
+            print!("Colors:  ");
+
+            stdout().flush().expect("failed to flush stdout");
+
+            input.clear();
+            stdin().read_line(&mut input).expect("failed to read input");
+
+            match parse_mask(&input) {
+                Ok(mask) => break mask,
+                Err(err) => {
+                    eprintln!("   Invalid input - {err}");
+                    eprintln!("   Use 5 chars of C/M/W (or G/Y/X)");
+                }
+            }
+        };
+
+        if mask == [wordle::Correctness::Correct; 5] {
+            println!("Solved in {turn} guesses!");
+            return;
+        }
+
+        history.push(wordle::Guess::new(guess, mask));
+    }
 }
 
 fn play<G: Guesser>(mut new: impl FnMut() -> G, args: &Args) {
@@ -83,6 +129,22 @@ fn play<G: Guesser>(mut new: impl FnMut() -> G, args: &Args) {
     if !args.no_stats {
         print_statistics(score_counts);
     }
+}
+
+fn parse_mask(input: &str) -> Result<[wordle::Correctness; 5], String> {
+    input
+        .trim()
+        .chars()
+        .filter(|correctness| !correctness.is_whitespace())
+        .map(|correctness| match correctness.to_ascii_uppercase() {
+            'C' => Ok(wordle::Correctness::Correct),
+            'M' => Ok(wordle::Correctness::Misplaced),
+            'W' => Ok(wordle::Correctness::Wrong),
+            _ => Err(format!("Invalid character '{correctness}'")),
+        })
+        .collect::<Result<Vec<_>, _>>()?
+        .try_into()
+        .map_err(|v: Vec<_>| format!("Expected 5 letters, got {}", v.len()))
 }
 
 fn print_statistics(score_counts: [usize; wordle::MAX_GUESSES]) {

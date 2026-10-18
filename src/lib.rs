@@ -33,10 +33,7 @@ impl Wordle {
             );
 
             let mask = Correctness::compute(answer, &guess);
-            history.push(Guess {
-                word: Cow::Owned(guess),
-                mask,
-            });
+            history.push(Guess::new(guess, mask));
         }
 
         None
@@ -96,6 +93,13 @@ pub struct Guess<'a> {
 }
 
 impl Guess<'_> {
+    pub fn new(word: String, mask: [Correctness; 5]) -> Self {
+        Self {
+            word: Cow::Owned(word),
+            mask,
+        }
+    }
+
     fn allows(&self, word: &str) -> bool {
         Correctness::compute(word, &self.word) == self.mask
     }
