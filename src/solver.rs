@@ -90,7 +90,7 @@ pub struct Solver {
 }
 
 impl Solver {
-    const FIRST_GUESS: &str = "tares";
+    const FIRST_GUESS: &str = "salet";
 
     pub fn builder() -> SolverBuilder {
         SolverBuilder::default()
