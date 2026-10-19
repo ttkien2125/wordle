@@ -21,10 +21,10 @@ impl Wordle {
     pub fn play<G: Guesser>(&self, answer: &'static str, mut guesser: G) -> Option<usize> {
         let mut history = Vec::new();
 
-        for i in 1..=MAX_GUESSES {
+        for score in 1..=MAX_GUESSES {
             let guess = guesser.guess(&history);
             if guess == answer {
-                return Some(i);
+                return Some(score);
             }
 
             assert!(
