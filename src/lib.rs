@@ -74,17 +74,6 @@ impl Correctness {
 
         mask
     }
-
-    pub fn patterns() -> impl Iterator<Item = [Self; 5]> {
-        itertools::iproduct!(
-            [Self::Correct, Self::Misplaced, Self::Wrong],
-            [Self::Correct, Self::Misplaced, Self::Wrong],
-            [Self::Correct, Self::Misplaced, Self::Wrong],
-            [Self::Correct, Self::Misplaced, Self::Wrong],
-            [Self::Correct, Self::Misplaced, Self::Wrong]
-        )
-        .map(From::from)
-    }
 }
 
 pub struct Guess<'a> {

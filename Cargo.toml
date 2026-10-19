@@ -7,5 +7,4 @@ edition = "2024"
 debug = true
 
 [dependencies]
-itertools = "0.15"
 clap = { version = "4", features = [ "derive" ] }
