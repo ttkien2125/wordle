@@ -170,44 +170,28 @@ struct ScoreContext {
 
 impl ScoreContext {
     fn new(rank: Rank, candidates: &[(&str, usize)]) -> Self {
-        match rank {
-            Rank::WeightedInformation => {
-                let total = candidates.iter().map(|&(_, weight)| weight).sum::<usize>() as f64;
-                Self {
-                    rank,
-                    total_weight: total,
-                    max_possible_sum: total * total.log2(),
-                    baseline_sum: 0.0,
-                }
-            }
-            Rank::ExpectedScore => {
-                let (total, baseline_sum) =
-                    candidates
-                        .iter()
-                        .fold((0.0, 0.0), |(acc_total, acc_sum), &(_, weight)| {
-                            let weight = weight as f64;
-                            let new_total = acc_total + weight;
-                            let new_sum = if weight > 1.0 {
-                                acc_sum + weight * weight.log2()
-                            } else {
-                                acc_sum
-                            };
-                            (new_total, new_sum)
-                        });
+        let mut total_weight = 0.0;
+        let mut baseline_sum = 0.0;
 
-                Self {
-                    rank,
-                    total_weight: total,
-                    max_possible_sum: total * total.log2(),
-                    baseline_sum,
+        if matches!(rank, Rank::WeightedInformation | Rank::ExpectedScore) {
+            for &(_, weight) in candidates {
+                let weight = weight as f64;
+                total_weight += weight;
+                if rank == Rank::ExpectedScore && weight > 1.0 {
+                    baseline_sum += weight * weight.log2();
                 }
             }
-            _ => Self {
-                rank,
-                total_weight: 0.0,
-                max_possible_sum: 0.0,
-                baseline_sum: 0.0,
+        }
+
+        Self {
+            rank,
+            total_weight,
+            max_possible_sum: if total_weight > 0.0 {
+                total_weight * total_weight.log2()
+            } else {
+                0.0
             },
+            baseline_sum,
         }
     }
 
@@ -242,9 +226,9 @@ impl ScoreContext {
             Rank::WeightedInformation => guess_weight * (sum - self.max_possible_sum),
             Rank::ExpectedScore => {
                 let p_correct = guess_weight / self.total_weight;
-                let p_miss = 1.0 - p_correct;
                 let remaining_entropy = ((sum - self.baseline_sum) / self.total_weight).max(0.0);
-                p_correct + p_miss * estimate_remaining_guesses(remaining_entropy)
+                let remaining_guesses = (remaining_entropy * 3.870 + 3.679).ln();
+                p_correct + (1.0 - p_correct) * remaining_guesses
             }
         }
     }
@@ -291,9 +275,4 @@ fn mask_to_index(mask: [Correctness; 5]) -> usize {
         };
         acc * 3 + digit
     })
-}
-
-#[inline(always)]
-fn estimate_remaining_guesses(remaining_entropy: f64) -> f64 {
-    (remaining_entropy * 3.870 + 3.679).ln()
 }
