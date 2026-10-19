@@ -3,7 +3,8 @@ use std::{borrow::Cow, sync::OnceLock};
 use crate::{Correctness, DICTIONARY, Guess, Guesser};
 
 static SIGMOID_INITIAL: OnceLock<Vec<(&'static str, usize)>> = OnceLock::new();
-static TURN2_CACHE: OnceLock<[&'static str; 243]> = OnceLock::new();
+static TURN1_BUCKETS: OnceLock<[Vec<(&'static str, usize)>; 243]> = OnceLock::new();
+static TURN2_CACHE: [OnceLock<&'static str>; 243] = [const { OnceLock::new() }; 243];
 
 const N_COMMON_WORDS: f64 = 3000.0;
 const SIGMOID_STEEPNESS: f64 = 10.0;
@@ -54,8 +55,8 @@ impl SolverBuilder {
         self
     }
 
-    fn initial_candidates(self) -> &'static [(&'static str, usize)] {
-        if self.sigmoid {
+    pub fn build(self) -> Solver {
+        let candidates = Cow::Borrowed(if self.sigmoid {
             SIGMOID_INITIAL
                 .get_or_init(|| {
                     let total_words = DICTIONARY.len() as f64;
@@ -66,7 +67,6 @@ impl SolverBuilder {
                             let z =
                                 (rank as f64 - N_COMMON_WORDS) * SIGMOID_STEEPNESS / total_words;
                             let sigmoid = 1.0 / (1.0 + z.exp());
-
                             let weight = (sigmoid * WEIGHT_SCALE).round() as usize + 1;
                             (word, weight)
                         })
@@ -75,12 +75,10 @@ impl SolverBuilder {
                 .as_slice()
         } else {
             &DICTIONARY[..]
-        }
-    }
+        });
 
-    pub fn build(self) -> Solver {
         Solver {
-            candidates: Cow::Borrowed(self.initial_candidates()),
+            candidates,
             options: self,
         }
     }
@@ -98,66 +96,15 @@ impl Solver {
         SolverBuilder::default()
     }
 
-    fn init_turn2_cache(&self) -> [&'static str; 243] {
-        let mut buckets: [Vec<(&'static str, usize)>; 243] = std::array::from_fn(|_| Vec::new());
-        for &(word, weight) in self.options.initial_candidates() {
-            let mask = Correctness::compute(word, Solver::FIRST_GUESS);
-            buckets[mask_to_index(mask)].push((word, weight));
-        }
-
-        std::array::from_fn(|index| self.pick_best(&buckets[index]))
-    }
-
-    fn pick_best(&self, candidates: &[(&'static str, usize)]) -> &'static str {
-        if candidates.len() <= 2 {
-            return candidates
-                .first()
-                .map_or(Self::FIRST_GUESS, |&(word, _)| word);
-        }
-
-        let context = ScoreContext::new(self.options.rank, candidates);
-        let mut min_loss = f64::INFINITY;
-        let mut best_word = candidates[0].0;
-
-        let cut_off = if self.options.cut_off {
-            (candidates.len() / 3).max(20)
-        } else {
-            usize::MAX
-        };
-
-        for &(guess_word, guess_weight) in candidates.iter().take(cut_off) {
-            let guess_weight = guess_weight as f64;
-            let max_allowed_sum = context.max_allowed_sum(min_loss, guess_weight);
-            if max_allowed_sum <= 0.0 {
-                continue;
+    fn retain(&mut self, f: impl FnMut(&(&str, usize)) -> bool) {
+        match self.candidates {
+            Cow::Borrowed(candidates) => {
+                self.candidates = Cow::Owned(candidates.iter().copied().filter(f).collect());
             }
-
-            let mut pattern_weights = [0; 243];
-            for &(target_word, target_weight) in candidates.iter() {
-                let mask = Correctness::compute(target_word, guess_word);
-                unsafe {
-                    *pattern_weights.get_unchecked_mut(mask_to_index(mask)) += target_weight;
-                }
-            }
-
-            let mut sum = 0.0;
-            for weight in pattern_weights {
-                if weight > 1 {
-                    let weight = weight as f64;
-                    sum += weight * weight.log2();
-                    if sum >= max_allowed_sum {
-                        break;
-                    }
-                }
-            }
-
-            if sum < max_allowed_sum {
-                min_loss = context.compute_loss(sum, guess_weight);
-                best_word = guess_word;
+            Cow::Owned(ref mut candidates) => {
+                candidates.retain(f);
             }
         }
-
-        best_word
     }
 }
 
@@ -211,10 +158,10 @@ impl ScoreContext {
                 let max_estimated_guesses = (min_loss - p_correct) / p_miss;
                 let max_remaining_entropy = (max_estimated_guesses.exp() - 3.679) / 3.870;
                 if max_remaining_entropy <= 0.0 {
-                    return 0.0;
+                    0.0
+                } else {
+                    self.baseline_sum + max_remaining_entropy * self.total_weight
                 }
-
-                self.baseline_sum + max_remaining_entropy * self.total_weight
             }
         }
     }
@@ -241,27 +188,77 @@ impl Guesser for Solver {
         };
 
         if history.len() == 1 {
-            let cache = TURN2_CACHE.get_or_init(|| self.init_turn2_cache());
+            let buckets = TURN1_BUCKETS.get_or_init(|| {
+                let mut buckets = std::array::from_fn(|_| Vec::new());
+                for &(word, weight) in self.candidates.iter() {
+                    let mask = Correctness::compute(word, Self::FIRST_GUESS);
+                    buckets[mask_to_index(mask)].push((word, weight));
+                }
+                buckets
+            });
+
             let index = mask_to_index(last_guess.mask);
-            return cache[index].to_string();
+
+            self.candidates = Cow::Borrowed(&buckets[index]);
+
+            if let Some(&word) = TURN2_CACHE[index].get() {
+                return word.to_string();
+            }
+        } else {
+            self.retain(|&(word, _)| last_guess.allows(word));
         }
 
-        match self.candidates {
-            Cow::Borrowed(candidates) => {
-                self.candidates = Cow::Owned(
-                    candidates
-                        .iter()
-                        .copied()
-                        .filter(|&(word, _)| history.iter().all(|guess| guess.allows(word)))
-                        .collect(),
-                );
-            }
-            Cow::Owned(ref mut candidates) => {
-                candidates.retain(|&(word, _)| last_guess.allows(word));
+        let mut best_word = self.candidates[0].0;
+
+        if self.candidates.len() > 2 {
+            let context = ScoreContext::new(self.options.rank, &self.candidates);
+            let mut min_loss = f64::INFINITY;
+
+            let cut_off = if self.options.cut_off {
+                (self.candidates.len() / 3).max(20)
+            } else {
+                usize::MAX
+            };
+
+            for &(guess_word, guess_weight) in self.candidates.iter().take(cut_off) {
+                let guess_weight = guess_weight as f64;
+                let max_allowed_sum = context.max_allowed_sum(min_loss, guess_weight);
+                if max_allowed_sum <= 0.0 {
+                    continue;
+                }
+
+                let mut pattern_weights = [0; 243];
+                for &(target_word, target_weight) in self.candidates.iter() {
+                    let mask = Correctness::compute(target_word, guess_word);
+                    unsafe {
+                        *pattern_weights.get_unchecked_mut(mask_to_index(mask)) += target_weight;
+                    }
+                }
+
+                let mut sum = 0.0;
+                for weight in pattern_weights {
+                    if weight > 1 {
+                        let w = weight as f64;
+                        sum += w * w.log2();
+                        if sum >= max_allowed_sum {
+                            break;
+                        }
+                    }
+                }
+
+                if sum < max_allowed_sum {
+                    min_loss = context.compute_loss(sum, guess_weight);
+                    best_word = guess_word;
+                }
             }
         }
 
-        self.pick_best(&self.candidates).to_string()
+        if history.len() == 1 {
+            let index = mask_to_index(last_guess.mask);
+            let _ = TURN2_CACHE[index].set(best_word);
+        }
+
+        best_word.to_string()
     }
 }
 
